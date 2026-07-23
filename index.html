@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
 <title>法人電気の開始・切替 無料お見積りフォーム｜SymEnergy</title>
 <meta name="description" content="低圧の法人さま限定。いまの契約情報をもとに、電気料金を無料でお見積りします。最短30秒・初期費用0円・切替工事なし。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -439,6 +439,8 @@
   .doc-foot{padding:10px 16px;background:#faf9f5;color:#8b8577;font-size:.62rem;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 
   /* toast */
+  .kb-spacer{height:0}
+
   .toast{
     position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(16px);
     background:var(--ink);color:#fff;font-size:.8rem;font-weight:500;
@@ -515,7 +517,7 @@
 
       <div class="field" id="f-power">
         <label class="field-label" for="currentPower">現在の電力会社 <span class="badge opt">任意</span></label>
-        <input class="text-input" type="text" id="currentPower" name="currentPower" placeholder="例：東京電力エナジーパートナー" autocomplete="organization">
+        <input class="text-input" type="text" id="currentPower" name="currentPower" enterkeyhint="done" placeholder="例：東京電力エナジーパートナー" autocomplete="organization">
         <p class="field-note">わかる範囲でOK。空欄でも進めます。</p>
       </div>
 
@@ -576,13 +578,13 @@
 
       <div class="field" id="f-company">
         <label class="field-label" for="companyName">貴社名・店舗名 <span class="badge req">必須</span></label>
-        <input class="text-input" type="text" id="companyName" name="companyName" placeholder="例：シン商店" autocomplete="organization">
+        <input class="text-input" type="text" id="companyName" name="companyName" enterkeyhint="next" data-enter-next="personName" placeholder="例：シン商店" autocomplete="organization">
         <p class="error-msg">貴社名・店舗名を入力してください。</p>
       </div>
 
       <div class="field" id="f-person">
         <label class="field-label" for="personName">ご担当者名 <span class="badge req">必須</span></label>
-        <input class="text-input" type="text" id="personName" name="personName" placeholder="例：山田 太郎" autocomplete="name">
+        <input class="text-input" type="text" id="personName" name="personName" enterkeyhint="done" placeholder="例：山田 太郎" autocomplete="name">
         <p class="error-msg">ご担当者名を入力してください。</p>
       </div>
 
@@ -611,13 +613,13 @@
 
       <div class="field" id="f-email">
         <label class="field-label" for="email">メールアドレス <span class="badge req">必須</span></label>
-        <input class="text-input" type="email" id="email" name="email" placeholder="例：yamada@example.co.jp" autocomplete="email" inputmode="email">
+        <input class="text-input" type="email" id="email" name="email" enterkeyhint="next" data-enter-next="tel" placeholder="例：yamada@example.co.jp" autocomplete="email" inputmode="email">
         <p class="error-msg">メールアドレスを正しく入力してください。</p>
       </div>
 
       <div class="field" id="f-tel">
         <label class="field-label" for="tel">電話番号 <span class="badge req">必須</span></label>
-        <input class="text-input" type="tel" id="tel" name="tel" placeholder="例：0521234567" autocomplete="tel" inputmode="tel">
+        <input class="text-input" type="tel" id="tel" name="tel" enterkeyhint="done" placeholder="例：0521234567" autocomplete="tel" inputmode="tel">
         <p class="field-note">ハイフンなしでも入力できます。</p>
         <p class="error-msg">電話番号を正しく入力してください。</p>
       </div>
@@ -719,6 +721,7 @@
     </section>
 
   </div>
+  <div class="kb-spacer" id="kbSpacer" aria-hidden="true"></div>
 </main>
 
 <footer class="site-footer">
@@ -1003,6 +1006,42 @@
     toast.classList.add("show");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function(){ toast.classList.remove("show"); }, 5000);
+  });
+
+  /* ---------- スマホのキーボード対策 ---------- */
+  /* 1) キーボードの高さぶんページ下部に余白を追加し、
+        キーボードに隠れた項目までスクロールできるようにする */
+  var spacer = document.getElementById("kbSpacer");
+  if (window.visualViewport) {
+    var vv = window.visualViewport;
+    var adjustSpacer = function(){
+      var kb = window.innerHeight - vv.height;
+      spacer.style.height = kb > 120 ? (kb + 60) + "px" : "0px";
+    };
+    vv.addEventListener("resize", adjustSpacer);
+  }
+
+  /* 2) 入力欄フォーカス時、キーボードに隠れない画面中央へ自動スクロール */
+  document.querySelectorAll(".text-input").forEach(function(el){
+    el.addEventListener("focus", function(){
+      setTimeout(function(){
+        el.scrollIntoView({ block: "center", behavior: "smooth" });
+      }, 300); /* キーボードの出現アニメーション後に実行 */
+    });
+  });
+
+  /* 3) キーボードの「次へ／完了」キーで移動（閉じずに次の入力欄へ） */
+  document.querySelectorAll(".text-input").forEach(function(el){
+    el.addEventListener("keydown", function(e){
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      var nextId = el.getAttribute("data-enter-next");
+      if (nextId) {
+        var nx = document.getElementById(nextId);
+        if (nx) { nx.focus(); return; }
+      }
+      el.blur(); /* 最後の欄では完了＝キーボードを閉じる */
+    });
   });
 })();
 </script>
