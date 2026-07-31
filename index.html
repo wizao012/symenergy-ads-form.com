@@ -273,7 +273,12 @@
   .btn-primary .main{display:block;font-size:1.05rem;font-weight:900;letter-spacing:.04em;line-height:1.4}
   .btn-primary .sub{display:block;font-size:.72rem;font-weight:700;opacity:.92;margin-top:1px}
   .btn-primary.teal{background:linear-gradient(180deg,#0aa2b0,var(--teal-deep));box-shadow:0 10px 22px -8px rgba(6,117,128,.55)}
+  .btn-primary[disabled]{opacity:.6;cursor:default;transform:none;filter:none;pointer-events:none}
   .submit-note{text-align:center;font-size:.75rem;color:var(--faint);margin-top:12px}
+  .send-error{
+    display:none;text-align:center;font-size:.8rem;font-weight:700;color:var(--req);
+    background:var(--req-soft);border-radius:10px;padding:10px 12px;margin-top:12px;
+  }
 
   /* panels */
   .panel{display:none}
@@ -654,6 +659,7 @@
         </button>
       </div>
       <p class="submit-note">送信後の費用は一切かかりません。内容を確認のうえご連絡します。<br>切り替えをお決めの方は、送信後そのままWEBでお申し込みまで進めます。</p>
+      <p class="send-error" id="sendError" role="alert">送信に失敗しました。通信環境をご確認のうえ、もう一度お試しください。</p>
     </section>
 
     <!-- ================= THANKS ================= -->
@@ -923,7 +929,20 @@
   });
 
   /* ---------- 送信 ---------- */
-  document.getElementById("submitBtn").addEventListener("click", function(){
+  /* 送信先：Zapier Webhook（変更する場合はこのURLを書き換えてください） */
+  var WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/12525485/462qojv/";
+
+  var submitBtn = document.getElementById("submitBtn");
+  var submitLabel = submitBtn.querySelector(".main");
+  var sendError = document.getElementById("sendError");
+
+  function setSending(on){
+    submitBtn.disabled = on;
+    submitLabel.textContent = on ? "送信中…" : "無料で見積りを依頼する";
+  }
+
+  submitBtn.addEventListener("click", function(){
+    if(submitBtn.disabled) return;
     if(!validateStep(3)) return;
 
     var payload = {
@@ -935,25 +954,38 @@
       email: document.getElementById("email").value.trim(),
       tel: document.getElementById("tel").value.trim(),
       contactMethod: checkedValue("contactMethod") || "どちらでも",
-      submittedAt: new Date().toISOString()
+      submittedAt: new Date().toISOString(),
+      submittedAtJst: new Date().toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }),
+      pageUrl: location.href
     };
 
-    /* ============================================================
-       送信先の実装ポイント：
-       フォームAPI・スプレッドシート連携・メール送信などの
-       エンドポイントが決まったら、下記の fetch を有効にしてください。
+    /* application/x-www-form-urlencoded で送信。
+       プリフライト（CORS事前確認）が発生しない形式のため、
+       ブラウザから直接Zapierへ確実に届きます。 */
+    var body = new URLSearchParams(payload);
 
-       fetch("https://example.com/api/estimate", {
-         method: "POST",
-         headers: { "Content-Type": "application/json" },
-         body: JSON.stringify(payload)
-       });
-       ============================================================ */
-    console.log("estimate request:", payload);
+    setSending(true);
+    sendError.style.display = "none";
 
-    stepperArea.style.display = "none";
-    heroLead.textContent = "ご依頼内容を受け付けました。";
-    showStep(4);
+    var ctrl = ("AbortController" in window) ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 15000) : null;
+
+    fetch(WEBHOOK_URL, {
+      method: "POST",
+      body: body,
+      signal: ctrl ? ctrl.signal : undefined
+    }).then(function(res){
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      stepperArea.style.display = "none";
+      heroLead.textContent = "ご依頼内容を受け付けました。";
+      showStep(4);
+    }).catch(function(err){
+      console.error("送信エラー:", err);
+      sendError.style.display = "block";
+    }).finally(function(){
+      if(timer) clearTimeout(timer);
+      setSending(false);
+    });
   });
 
   /* ---------- サンプルモーダル ---------- */
