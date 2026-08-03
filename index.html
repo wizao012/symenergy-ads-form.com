@@ -972,10 +972,12 @@
 
     fetch(WEBHOOK_URL, {
       method: "POST",
+      mode: "no-cors",  /* ZapierはCORS許可ヘッダーを返さないため必須 */
       body: body,
       signal: ctrl ? ctrl.signal : undefined
-    }).then(function(res){
-      if(!res.ok) throw new Error("HTTP " + res.status);
+    }).then(function(){
+      /* no-cors ではレスポンス内容を読めない（opaque応答）ため、
+         送信リクエストが完了した時点で成功として扱う */
       stepperArea.style.display = "none";
       heroLead.textContent = "ご依頼内容を受け付けました。";
       showStep(4);
