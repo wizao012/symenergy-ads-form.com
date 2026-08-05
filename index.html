@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-MP9RKZJQ');</script>
+<!-- End Google Tag Manager -->
 <title>法人電気の開始・切替 無料お見積りフォーム｜SymEnergy</title>
 <meta name="description" content="低圧の法人さま限定。いまの契約情報をもとに、電気料金を無料でお見積りします。最短30秒・初期費用0円・切替工事なし。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -465,6 +472,10 @@
 </style>
 </head>
 <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MP9RKZJQ"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
 
 <header class="site-header">
   <div class="inner">
@@ -846,6 +857,7 @@
 
   var TOTAL = 3;
   var current = 1;
+  var maxStepReached = 1;
   var card = document.getElementById("formCard");
   var fill = document.getElementById("progressFill");
   var heroLead = document.getElementById("heroLead");
@@ -854,6 +866,12 @@
   /* ---------- ステップ表示 ---------- */
   function showStep(n){
     current = n;
+    /* 計測：ステップ到達イベント（初回到達時のみ） */
+    if(n > maxStepReached && n <= TOTAL){
+      maxStepReached = n;
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({ event: "form_step_view", form_step: n });
+    }
     document.querySelectorAll(".panel").forEach(function(p){ p.classList.remove("current"); });
     document.getElementById("panel" + n).classList.add("current");
 
@@ -880,6 +898,10 @@
   }
   function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v); }
   function validTel(v){ var d = v.replace(/[-‐−ー\s()（）]/g, ""); return /^0\d{9,10}$/.test(d); }
+  function toE164(v){
+    var d = v.replace(/[^0-9]/g, "");
+    return d.charAt(0) === "0" ? "+81" + d.slice(1) : d;
+  }
 
   function validateStep(n){
     var ok = true, firstBad = null;
@@ -978,6 +1000,21 @@
     }).then(function(){
       /* no-cors ではレスポンス内容を読めない（opaque応答）ため、
          送信リクエストが完了した時点で成功として扱う */
+
+      /* 計測：送信成功CV（GTMでこのイベントを広告CVタグのトリガーに使用） */
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: "form_submit_success",
+        form_name: "houjin_denki_mitsumori",
+        area: payload.area,
+        corp_type: payload.corpType,
+        contact_method: payload.contactMethod,
+        user_data: {  /* Google広告 拡張コンバージョン用 */
+          email: payload.email,
+          phone_number: toE164(payload.tel)
+        }
+      });
+
       stepperArea.style.display = "none";
       heroLead.textContent = "ご依頼内容を受け付けました。";
       showStep(4);
@@ -1040,6 +1077,14 @@
     toast.classList.add("show");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function(){ toast.classList.remove("show"); }, 5000);
+  });
+
+  /* ---------- 計測：お申し込みリンクのクリック ---------- */
+  document.querySelectorAll('a[href*="symenergy.net/apply"]').forEach(function(a){
+    a.addEventListener("click", function(){
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({ event: "apply_click" });
+    });
   });
 
   /* ---------- スマホのキーボード対策 ---------- */
